@@ -20,15 +20,13 @@ contract ERC20 is IERC20 {
     mapping(address => uint256) balances;
     mapping(address => mapping(address => uint256)) allowed;
     uint256 totalSupply_ = 0 ether;
-    bool internal constructed = false;
-    function construct() external {
-        require(constructed == false);
-        balances[msg.sender] += 36500 ether;
-        totalSupply_ += 36500 ether;
-        emit Transfer(address(0), msg.sender, 36500 ether);
-        lastCall = block.timestamp / 3600;
-        constructed = true;
+    constructor() {
+        balances[msg.sender] += 3650000 ether;
+        totalSupply_ += 3650000 ether;
+        emit Transfer(address(0), msg.sender, 3650000 ether);
+        lastCall = block.timestamp / 86400;
     }
+
     function totalSupply() public view override returns (uint256) {
         return totalSupply_;
     }
@@ -87,11 +85,32 @@ contract ERC20 is IERC20 {
         uint256 id;
         uint256 harmful; // (0, 1, 2, 3) = (No Proposal, Proposal Ongoing, Post Safe, Post Unsafe)
     }
+    mapping(address => Lock) public locks;
     struct Lock {
         uint256 end;
         uint256 value;
     }
-    mapping(address => Lock) locks;
+        function lock() public payable {
+        require(msg.value == 1 ether);
+        require(locks[msg.sender].value == 0);
+        locks[msg.sender].end = block.timestamp + 14 days;
+        locks[msg.sender].value = 1 ether;
+            if (profiles[msg.sender].owner != msg.sender) {
+            totalAmountLocked[msg.sender] = 0;
+            profiles[msg.sender] = Profile({owner: msg.sender, name: string.concat("New User ", Strings.toString(addresses.length)),timeCreated: block.number,id: addresses.length});
+            addresses.push(msg.sender);
+    }
+        }
+    
+ function unlock() public lockedValue() {
+        require(locks[msg.sender].end < block.timestamp);
+        locks[msg.sender].value = 0;
+        payable(msg.sender).transfer(1 ether);
+    }
+    modifier lockedValue() {
+        require(locks[msg.sender].value == 1 ether);
+        _;
+    }
     modifier profileExists(address _address) {
         require(profiles[_address].owner != address(0x0));
         _;
@@ -99,13 +118,6 @@ contract ERC20 is IERC20 {
     modifier nonEmptyInput(string calldata _input) {
         require(keccak256(abi.encodePacked(_input)) !=keccak256(abi.encodePacked("")));
         _;
-    }
-    modifier lockedValue() {
-        require(locks[msg.sender].value == 1 ether);
-        _;
-    }
-    function getLock(address _address) public view returns(Lock memory) {
-        return(locks[_address]);
     }
     function follow(address _address) external profileExists(_address) lockedValue() {
         require(msg.sender != _address);
@@ -123,36 +135,12 @@ contract ERC20 is IERC20 {
         delete following[msg.sender][checkfollowing[msg.sender][_address].index];
         checkfollowing[msg.sender][_address].exists = false;
     }
-    bool internal lockedUnlock = false;
-    function lock() public payable  returns (Profile memory) {
-        require(msg.value == 1 ether);
-        require(locks[msg.sender].value == 0);
-        locks[msg.sender].end = block.timestamp + 14 days;
-        locks[msg.sender].value = 1 ether;
-            if (profiles[msg.sender].owner != msg.sender) {
-            totalAmountLocked[msg.sender] = 0;
-            profiles[msg.sender] = Profile({owner: msg.sender, name: string.concat("New User ", Strings.toString(addresses.length)),timeCreated: block.number,id: addresses.length});
-            addresses.push(msg.sender);
-            return (profiles[msg.sender]);
-    } else {
-        return(profiles[msg.sender]);
-        }
-    }
-    
-    function unlock() public lockedValue() {
-        require(lockedUnlock == false);
-        lockedUnlock = true;
-        require(locks[msg.sender].end < block.timestamp);
-        payable(msg.sender).transfer(1 ether);
-        locks[msg.sender].value = 0;
-        lockedUnlock = false;
-    }
     function changeNickname(string calldata _name) public lockedValue() nonEmptyInput(_name) { 
-        require(bytes(_name).length <= 64);
+        require(bytes(_name).length <= 66);
         profiles[msg.sender].name = _name;
     }
     function createPost(string calldata _content) external lockedValue() nonEmptyInput(_content) {
-        Post memory newPost = Post({author: msg.sender,content: _content,timeCreated: block.number,id: posts.length,harmful: 0 /*undecided post status*/});
+        Post memory newPost = Post({author: msg.sender,content: _content,timeCreated: block.number,id: posts.length,harmful: 0});
         posts.push(newPost);
     }
     function getPosts() external view returns (Post[] memory) {
@@ -160,12 +148,6 @@ contract ERC20 is IERC20 {
     }
     function getAddresses() external view returns (address[] memory) {
         return addresses;
-    }
-    function getFollowing(address _address) external view profileExists(_address) returns (address[] memory) {
-        return following[_address];
-    }
-    function getFollowers(address _address) external view returns (address[] memory) {
-        return followers[_address];
     }
     //DAO
     mapping(address => uint256) totalAmountLocked; //For security
@@ -191,7 +173,7 @@ contract ERC20 is IERC20 {
         voters[proposals.length].push(msg.sender);
         votedYes[proposals.length][msg.sender] = true;
         voted[proposals.length][msg.sender] = true;
-        proposals.push(Proposal(msg.sender,proposals.length,(block.timestamp + 1 hours),_desc,false,postId));
+        proposals.push(Proposal(msg.sender,proposals.length,(block.timestamp + 24 hours),_desc,false,postId));
         posts[postId].harmful = 1; //status being decided
         return (proposals[proposals.length - 1]);
     }
@@ -202,6 +184,7 @@ contract ERC20 is IERC20 {
         voted[id][msg.sender] = true;
 
         if (proposals[id].deadline <= block.timestamp) {
+            proposals[id].finished = true;
             //Last vote
             totalAmountLocked[msg.sender] += 1 ether; //Add 1 ftm locked
         voters[id].push(msg.sender);
@@ -236,12 +219,12 @@ contract ERC20 is IERC20 {
             if (yesPercent >= noPercent) {
                 posts[proposals[id].postId].harmful = 3; //bad post
                 for (uint a = 0; a < payouts[id][true].length; a++) {
-                    payoutReceivers[block.timestamp/3600].push(payouts[id][true][a]);
+                    payoutReceivers[block.timestamp/86400].push(payouts[id][true][a]);
                 }
             } else  {
                 posts[proposals[id].postId].harmful = 2; //good post
                 for (uint a = 0; a < payouts[id][false].length; a++) {
-                    payoutReceivers[block.timestamp/3600].push(payouts[id][true][a]);
+                    payoutReceivers[block.timestamp/86400].push(payouts[id][true][a]);
                 }
             }
         } else {
@@ -252,22 +235,22 @@ contract ERC20 is IERC20 {
         }
     }
     function distribute() external {
-        require(lastCall < block.timestamp/3600);
-        for (uint i = lastCall; i < block.timestamp/3600; i++) {
-            totalSupply_ += 1 ether;
+        require(lastCall < block.timestamp/86400);
+        for (uint i = lastCall; i < block.timestamp/86400; i++) {
+            totalSupply_ += 100 ether;
             if (payoutReceivers[i].length == 0) {
-                balances[address(0x0)] += 1 ether;
-                emit Transfer(address(0x0), address(0x0), 1 ether);
+                balances[address(0x0)] += 100 ether;
+                emit Transfer(address(0x0), address(0x0), 100 ether);
             } else {
                 for (uint256 a = 0; a < payoutReceivers[i].length; a++) {
-                    balances[payoutReceivers[i][a]] += 1 ether/payoutReceivers[i].length;
-                    emit Transfer(address(0x0), payoutReceivers[i][a], 1 ether/payoutReceivers[i].length);
+                    balances[payoutReceivers[i][a]] += 100 ether/payoutReceivers[i].length;
+                    emit Transfer(address(0x0), payoutReceivers[i][a], 100 ether/payoutReceivers[i].length);
                 }
-                balances[address(0x0)] += 1 ether - (1 ether/payoutReceivers[i].length)*payoutReceivers[i].length;
-                emit Transfer(address(0x0), address(0x0), 1 ether - (1 ether/payoutReceivers[i].length)*payoutReceivers[i].length);
+                balances[address(0x0)] += 100 ether - (100 ether/payoutReceivers[i].length)*payoutReceivers[i].length;
+                emit Transfer(address(0x0), address(0x0), 100 ether - (100 ether/payoutReceivers[i].length)*payoutReceivers[i].length);
             }
         }
-        lastCall = (block.timestamp/3600);
+        lastCall = (block.timestamp/86400);
     }
 
     function getProposals() public view returns (Proposal[] memory) {
