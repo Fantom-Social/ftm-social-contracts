@@ -61,17 +61,10 @@ contract ERC20 is IERC20 {
         emit Transfer(owner, buyer, numTokens);
         return true;
     }
-    address[] internal addresses; //Social Media
+    address[] public addresses;
+
     mapping(address => Profile) public profiles;
-    mapping(address => address[]) public followers;
-    mapping(address => address[]) public following;
-    mapping(address => mapping(address => Array)) internal checkfollowing;
-    mapping(address => mapping(address => Array)) internal checkfollowers;
-    Post[] internal posts;
-    struct Array {
-        bool exists;
-        uint256 index;
-    }
+    Post[] public posts;
     struct Profile {
         address owner;
         string name;
@@ -118,22 +111,6 @@ contract ERC20 is IERC20 {
     modifier nonEmptyInput(string calldata _input) {
         require(keccak256(abi.encodePacked(_input)) !=keccak256(abi.encodePacked("")));
         _;
-    }
-    function follow(address _address) external profileExists(_address) lockedValue() {
-        require(msg.sender != _address);
-        require( checkfollowing[msg.sender][_address].exists != true);
-        checkfollowers[_address][msg.sender] = Array(true, followers[_address].length);
-        followers[_address].push(msg.sender);
-        checkfollowing[msg.sender][_address] = Array(true,following[msg.sender].length);
-        following[msg.sender].push(_address);
-    }
-    function unfollow(address _address) external profileExists(_address) lockedValue() {
-        require(msg.sender != _address);
-        require(checkfollowing[msg.sender][_address].exists == true);
-        delete followers[_address][checkfollowing[_address][msg.sender].index];
-        checkfollowers[_address][msg.sender].exists = false;
-        delete following[msg.sender][checkfollowing[msg.sender][_address].index];
-        checkfollowing[msg.sender][_address].exists = false;
     }
     function changeNickname(string calldata _name) public lockedValue() nonEmptyInput(_name) { 
         require(bytes(_name).length <= 66);
