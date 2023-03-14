@@ -8,14 +8,15 @@ interface FantomSocial {
 
 contract AddOns {
     address public addr;
-    struct followIndex {
+    struct Index {
         bool isListed;
         uint256 index;
     }
+
     mapping(address => address[]) public followers;
     mapping(address => address[]) public following;
-    mapping(address => mapping(address => followIndex)) followersIndex;
-    mapping(address => mapping(address => followIndex)) followingIndex;
+    mapping(address => mapping(address => Index))  internal followersIndex;
+    mapping(address => mapping(address => Index)) internal followingIndex;
 
     constructor(address addr_) {
         addr = addr_;
@@ -36,9 +37,9 @@ contract AddOns {
     function follow(address _address) external profileExists(_address) lockedValue {
         require(msg.sender != _address);
         require(followingIndex[msg.sender][_address].isListed != true); //no double follow
-        followersIndex[_address][msg.sender] = followIndex(true,followers[_address].length);
+        followersIndex[_address][msg.sender] = Index(true,followers[_address].length);
         followers[_address].push(msg.sender);
-        followingIndex[msg.sender][_address] = followIndex(true, following[msg.sender].length);
+        followingIndex[msg.sender][_address] = Index(true, following[msg.sender].length);
         following[msg.sender].push(_address);
     }
 
@@ -49,5 +50,21 @@ contract AddOns {
         followersIndex[_address][msg.sender].isListed = false;
         delete following[msg.sender][followingIndex[msg.sender][_address].index];
         followingIndex[msg.sender][_address].isListed = false;
+    }
+
+    mapping(uint256 /*post id*/ => address[]) public likes;
+    mapping(uint256 => mapping(address => Index)) internal likesIndex;
+
+    //Add post exists modifier to governance reporting too (if not added)
+    modifier postExists(uint256 postId) {
+        //Finish writing modifier
+        _;
+    }
+
+    function like(uint256 postId) postExists(postId) public {
+        //Write
+    }
+    function unlike(uint256 postId) postExists(postId) public {
+        //Write
     }
 }
