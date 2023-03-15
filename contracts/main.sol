@@ -77,7 +77,12 @@ contract ERC20 is IERC20 {
         uint256 timeCreated;
         uint256 id;
         uint256 harmful; // (0, 1, 2, 3) = (No Proposal, Proposal Ongoing, Post Safe, Post Unsafe)
+        bool isComment;
     }
+
+    mapping(uint256 => uint256) public commentOf;
+    mapping(uint256 => uint256[]) public comments;
+
     mapping(address => Lock) public locks;
     struct Lock {
         uint256 end;
@@ -116,8 +121,12 @@ contract ERC20 is IERC20 {
         require(bytes(_name).length <= 66);
         profiles[msg.sender].name = _name;
     }
-    function createPost(string calldata _content) external lockedValue() nonEmptyInput(_content) {
-        Post memory newPost = Post({author: msg.sender,content: _content,timeCreated: block.number,id: posts.length,harmful: 0});
+    function createPost(string calldata _content, bool isComment_, uint256 commentOf_) external lockedValue() nonEmptyInput(_content) {
+        Post memory newPost = Post({author: msg.sender,content: _content,timeCreated: block.number,id: posts.length,harmful: 0, isComment: isComment_});
+        if (isComment_ == true) {
+            commentOf[posts.length] = commentOf_;
+            comments[commentOf_].push(posts.length);
+        }
         posts.push(newPost);
     }
     function getPosts() external view returns (Post[] memory) {
