@@ -144,6 +144,7 @@ contract ERC20 is IERC20 {
     Proposal[] public proposals;
     mapping(uint256 => mapping(address => bool)) voted;
     function newProposal(string memory _desc, uint256 postId) lockedValue() public payable returns (Proposal memory) {
+        require(posts[postId].author != address(0x0));
         require(msg.value == 1000000000000000000);
         require(posts[postId].harmful == 0 /*undecided post status*/);
         totalAmountLocked[msg.sender] += 1 ether; //Add 1 ftm locked
@@ -155,6 +156,7 @@ contract ERC20 is IERC20 {
         return (proposals[proposals.length - 1]);
     }
     function vote(bool support, uint256 id) lockedValue() public payable {
+        require(proposals[id].reporter != address(0x0));
         require(msg.value == 1000000000000000000); //has value to lock
         require(voted[id][msg.sender] != true); //not voted yet
         require(proposals[id].finished == false); //proposal is not ended
