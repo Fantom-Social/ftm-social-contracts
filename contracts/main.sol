@@ -13,7 +13,7 @@ interface IERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner,address indexed spender,uint256 value);
 }
-contract ERC20 is IERC20 {
+contract FantomSocial is IERC20 {
     string public constant name = "FSM Dao Token";
     string public constant symbol = "FSMD";
     uint8 public constant decimals = 18;
@@ -64,6 +64,7 @@ contract ERC20 is IERC20 {
     address[] public addresses;
 
     mapping(address => Profile) public profiles;
+    Profile[] public profiles_;
     Post[] public posts;
     struct Profile {
         address owner;
@@ -72,12 +73,13 @@ contract ERC20 is IERC20 {
         uint256 id;
     }
     struct Post {
-        address author;
+        uint256 author;
         string content;
-        uint256 timeCreated;
+        uint256 blockCreated;
         uint256 id;
         uint256 harmful; // (0, 1, 2, 3) = (No Proposal, Proposal Ongoing, Post Safe, Post Unsafe)
         bool isComment;
+        uint256 timeCreated;
     }
 
     mapping(uint256 => uint256) public commentOf;
@@ -96,6 +98,7 @@ contract ERC20 is IERC20 {
             if (profiles[msg.sender].owner != msg.sender) {
             totalAmountLocked[msg.sender] = 0;
             profiles[msg.sender] = Profile({owner: msg.sender, name: string.concat("New User ", Strings.toString(addresses.length)),timeCreated: block.number,id: addresses.length});
+            profiles_.push(profiles[msg.sender]);
             addresses.push(msg.sender);
     }
         }
@@ -122,7 +125,7 @@ contract ERC20 is IERC20 {
         profiles[msg.sender].name = _name;
     }
     function createPost(string calldata _content, bool isComment_, uint256 commentOf_) external lockedValue() nonEmptyInput(_content) {
-        Post memory newPost = Post({author: msg.sender,content: _content,timeCreated: block.number,id: posts.length,harmful: 0, isComment: isComment_});
+        Post memory newPost = Post({author: profiles[msg.sender].id,content: _content, blockCreated: block.number,id: posts.length,harmful: 0, isComment: isComment_, timeCreated: block.timestamp});
         if (isComment_ == true) {
             commentOf[posts.length] = commentOf_;
             comments[commentOf_].push(posts.length);
@@ -153,7 +156,7 @@ contract ERC20 is IERC20 {
     Proposal[] public proposals;
     mapping(uint256 => mapping(address => bool)) voted;
     function newProposal(string memory _desc, uint256 postId) lockedValue() public payable returns (Proposal memory) {
-        require(posts[postId].author != address(0x0));
+        require(posts[postId].id != 0);
         require(msg.value == 1000000000000000000);
         require(posts[postId].harmful == 0 /*undecided post status*/);
         totalAmountLocked[msg.sender] += 1 ether; //Add 1 ftm locked
