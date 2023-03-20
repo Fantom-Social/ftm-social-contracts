@@ -65,6 +65,9 @@ contract FantomSocial is IERC20 {
 
     mapping(address => Profile) public profiles;
     Profile[] public profiles_;
+    function getProfiles() public view returns(Profile[] memory) {
+        return(profiles_);
+    }
     Post[] public posts;
     struct Profile {
         address owner;
@@ -127,6 +130,7 @@ contract FantomSocial is IERC20 {
     function createPost(string calldata _content, bool isComment_, uint256 commentOf_) external lockedValue() nonEmptyInput(_content) {
         Post memory newPost = Post({author: profiles[msg.sender].id,content: _content, blockCreated: block.number,id: posts.length,harmful: 0, isComment: isComment_, timeCreated: block.timestamp});
         if (isComment_ == true) {
+            require(posts[commentOf_].timeCreated != 0);
             commentOf[posts.length] = commentOf_;
             comments[commentOf_].push(posts.length);
         }
