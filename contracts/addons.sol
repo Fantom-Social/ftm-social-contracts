@@ -22,6 +22,14 @@ contract AddOns {
     mapping(address => mapping(address => Index))  internal followersIndex;
     mapping(address => mapping(address => Index)) internal followingIndex;
 
+    function getFollowers(address addr_) public view returns(address[] memory) {
+        return(followers[addr_]);
+    }
+    function getFollowing(address addr_) public view returns(address[] memory) {
+        return(following[addr_]);
+    }
+
+
     constructor(address addr_) {
         addr = addr_;
     }
@@ -57,6 +65,10 @@ contract AddOns {
 
     mapping(uint256 => address[]) public likes;
     mapping(uint256 => mapping(address => Index)) internal likesIndex;
+
+    function getLikes(uint256 postId_) public view returns(address[] memory) {
+        return(likes[postId_]);
+    }
 
     //Add post exists modifier to governance reporting too (if not added)
     modifier postExists(uint256 postId) {
