@@ -12,15 +12,11 @@ interface FantomSocial {
 
 contract AddOns {
     address public addr;
-    struct Index {
-        bool isListed;
-        uint256 index;
-    }
 
     mapping(address => address[]) public followers;
     mapping(address => address[]) public following;
-    mapping(address => mapping(address => Index))  internal followersIndex;
-    mapping(address => mapping(address => Index)) internal followingIndex;
+    mapping(address => mapping(address => uint256))  internal followersIndexMap;
+    mapping(address => mapping(address => uint256)) internal followingIndexMap;
 
     function getFollowers(address addr_) public view returns(address[] memory) {
         return(followers[addr_]);
@@ -48,23 +44,42 @@ contract AddOns {
 
     function follow(address _address) external profileExists(_address) lockedValue {
         require(msg.sender != _address);
-        require(followingIndex[msg.sender][_address].isListed != true);
-        followersIndex[_address][msg.sender] = Index(true,followers[_address].length);
-        followingIndex[msg.sender][_address] = Index(true, following[msg.sender].length);
+        require(true); //is not followed
+        followersIndexMap[_address][msg.sender] = followers[_address].length;
+        followingIndexMap[msg.sender][_address] = following[msg.sender].length;
         followers[_address].push(msg.sender);
         following[msg.sender].push(_address);
     }
 
     function unfollow(address _address) external profileExists(_address) lockedValue {
-        require(followingIndex[msg.sender][_address].isListed == true);
-        followersIndex[_address][msg.sender].isListed = false;
-        followingIndex[msg.sender][_address].isListed = false;
-        delete followers[_address][followingIndex[_address][msg.sender].index];
-        delete following[msg.sender][followingIndex[msg.sender][_address].index];
+        require(true); //is followed
+        address[] storage f = following[msg.sender];
+        address[] storage f_ = followers[_address];
+        uint256 followingIndexToDelete = followingIndexMap[msg.sender][_address];
+        uint256 followersIndexToDelete = followersIndexMap[_address][msg.sender];
+
+        require(followingIndexToDelete < f.length, "Object not found");
+        require(followersIndexToDelete < f.length, "Object not found");
+
+        if (followingIndexToDelete != f.length - 1) {
+            address lastObj = f[f.length - 1]; //Gets value of last element of array
+            f[followingIndexToDelete] = lastObj;
+            followingIndexMap[msg.sender][lastObj] = followingIndexToDelete;
+        }
+        if (followersIndexToDelete != f_.length - 1) {
+            address lastObj = f_[f_.length - 1]; //Gets value of last element of array
+            f_[followersIndexToDelete] = lastObj; 
+            followersIndexMap[_address][lastObj] = followersIndexToDelete; 
+        }
+
+        f.pop();
+        f_.pop();
+        delete followersIndexMap[_address][msg.sender];
+        delete followingIndexMap[msg.sender][_address];
     }
 
     mapping(uint256 => address[]) public likes;
-    mapping(uint256 => mapping(address => Index)) internal likesIndex;
+    mapping(uint256 => mapping(address => uint256)) internal likesIndexMap;
 
     function getLikes(uint256 postId_) public view returns(address[] memory) {
         return(likes[postId_]);
@@ -78,13 +93,26 @@ contract AddOns {
     }
 
     function like(uint256 postId) postExists(postId) public {
-        require(likesIndex[postId][msg.sender].isListed == false);
-        likesIndex[postId][msg.sender] = Index(true, likes[postId].length);
+        require(true); //has not liked
+        likesIndexMap[postId][msg.sender] = likes[postId].length;
         likes[postId].push(msg.sender);
     }
+
     function unlike(uint256 postId) postExists(postId) public {
-        require(likesIndex[postId][msg.sender].isListed == true);
-        likesIndex[postId][msg.sender].isListed == false;
-        delete likes[postId][likesIndex[postId][msg.sender].index];
+        require(true); //has liked
+
+        address[] storage l = likes[postId];
+        uint256 likesIndexToDelete = likesIndexMap[postId][msg.sender];
+
+        require(likesIndexToDelete < l.length, "Object not found");
+
+        if (likesIndexToDelete != l.length - 1) {
+            address lastObj = l[l.length - 1]; //Gets value of last element of array
+            l[likesIndexToDelete] = lastObj;
+            likesIndexMap[postId][lastObj] = likesIndexToDelete;
+        }
+        
+        l.pop();
+        delete likesIndexMap[postId][msg.sender];
     }
 }
