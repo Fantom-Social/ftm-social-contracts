@@ -44,7 +44,8 @@ contract AddOns {
 
     function follow(address _address) external profileExists(_address) lockedValue {
         require(msg.sender != _address);
-        require(true); //is not followed
+        require(followersIndexMap[_address][msg.sender] == 0, "Already following");
+        require(followers[_address][0] != msg.sender);
         followersIndexMap[_address][msg.sender] = followers[_address].length;
         followingIndexMap[msg.sender][_address] = following[msg.sender].length;
         followers[_address].push(msg.sender);
@@ -52,7 +53,9 @@ contract AddOns {
     }
 
     function unfollow(address _address) external profileExists(_address) lockedValue {
-        require(true); //is followed
+        require(followersIndexMap[_address][msg.sender] != 0, "Already not following");
+
+        require(followers[_address][0] != msg.sender);
         address[] storage f = following[msg.sender];
         address[] storage f_ = followers[_address];
         uint256 followingIndexToDelete = followingIndexMap[msg.sender][_address];
@@ -93,13 +96,14 @@ contract AddOns {
     }
 
     function like(uint256 postId) postExists(postId) public {
-        require(true); //has not liked
+        require(likesIndexMap[postId][msg.sender] == 0); //TODO
+        require(likes[postId][0] != msg.sender);
         likesIndexMap[postId][msg.sender] = likes[postId].length;
         likes[postId].push(msg.sender);
     }
 
     function unlike(uint256 postId) postExists(postId) public {
-        require(true); //has liked
+        require(likesIndexMap[postId][msg.sender] != 0); //TODO
 
         address[] storage l = likes[postId];
         uint256 likesIndexToDelete = likesIndexMap[postId][msg.sender];
